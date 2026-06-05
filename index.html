@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเช็คสถานะร้านกาแฟอัจฉริยะ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Sarabun & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+        }
+        
+        /* Premium custom background animations */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        /* Ambient glowing effects */
+        .glow-green {
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.4);
+        }
+        .glow-red {
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Pulse animation for active indicators */
+        @keyframes custom-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
+        }
+        .pulse-effect {
+            animation: custom-pulse 3s infinite ease-in-out;
+        }
+
+        /* Coffee steam animation */
+        @keyframes steam {
+            0% { transform: translateY(0) scaleX(1); opacity: 0.1; }
+            50% { transform: translateY(-5px) scaleX(1.1); opacity: 0.5; }
+            100% { transform: translateY(-10px) scaleX(1); opacity: 0; }
+        }
+        .steam-line {
+            animation: steam 2s infinite ease-in-out;
+        }
+        .steam-delay-1 { animation-delay: 0.4s; }
+        .steam-delay-2 { animation-delay: 0.8s; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col transition-colors duration-500 selection:bg-amber-200">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="w-full border-b border-slate-200/80 bg-white/70 backdrop-blur-md sticky top-0 z-40 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white shadow-md shadow-amber-600/30">
+                    <i class="fa-solid fa-mug-hot text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase block">Coffee Station Workspace</span>
+                    <h1 class="text-lg font-bold text-slate-800 -mt-1">ระบบจัดการสถานะร้านกาแฟอัจฉริยะ</h1>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <!-- Theme Swatcher Mini Control -->
+                <div class="hidden sm:flex items-center space-x-2 bg-slate-100 p-1 rounded-lg text-xs font-medium">
+                    <span class="text-slate-500 pl-2">ธีมร้าน:</span>
+                    <button onclick="setTheme('espresso')" id="theme-btn-espresso" class="px-2 py-1 rounded-md transition-all duration-200 bg-white shadow-sm text-amber-800 border border-slate-200">☕ Espresso</button>
+                    <button onclick="setTheme('matcha')" id="theme-btn-matcha" class="px-2 py-1 rounded-md transition-all duration-200 text-emerald-800 hover:bg-white/50">🍵 Matcha</button>
+                    <button onclick="setTheme('berry')" id="theme-btn-berry" class="px-2 py-1 rounded-md transition-all duration-200 text-rose-800 hover:bg-white/50">🍓 Berry</button>
+                </div>
+                <!-- Interactive Sound Bell Switch -->
+                <button onclick="toggleSound()" id="sound-toggle-btn" class="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors" title="เปิด/ปิด เสียงเอฟเฟกต์">
+                    <i class="fa-solid fa-volume-high" id="sound-icon"></i>
+                </button>
+                <!-- Reference Indicator verbatim name -->
+                <div class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-500">
+                    <i class="fa-solid fa-image text-slate-400"></i>
+                    <span>อ้างอิง: image_c4ab01.jpg</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN APPLICATION CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col justify-start">
+        
+        <!-- INTRO & QUICK TIP BANNER -->
+        <div class="mb-6 bg-gradient-to-r from-amber-500 to-amber-600 rounded-2xl p-4 sm:p-6 text-white shadow-lg shadow-amber-500/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="space-y-1">
+                <span class="bg-amber-400/30 text-amber-100 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Interactive Dual-View</span>
+                <h2 class="text-xl sm:text-2xl font-bold">ระบบจำลองสถานะร้านแบบเรียลไทม์ (Live-Sync)</h2>
+                <p class="text-amber-100/90 text-sm">ปรับแต่งข้อมูลที่ฝั่งเจ้าของร้าน (ซ้าย) แล้วสังเกตความเปลี่ยนแปลงที่เกิดขึ้นทันทีที่ฝั่งลูกค้า (ขวา)</p>
+            </div>
+            <div class="flex items-center gap-2 self-start md:self-auto">
+                <button onclick="resetToDefaults()" class="bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-semibold px-4 py-2.5 rounded-xl border border-white/20 transition-all duration-200">
+                    <i class="fa-solid fa-rotate text-xs mr-1"></i> รีเซ็ตค่าเริ่มต้น
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN SPLIT VIEW GRID -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- LEFT COLUMN: ADMIN CONTROL PANEL (5 cols on large screens) -->
+            <section class="lg:col-span-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
+                <!-- Header (matches image style) -->
+                <div class="bg-slate-200 text-slate-700 px-6 py-4 border-b border-slate-300 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-user-gear text-slate-500"></i>
+                        <h3 class="font-bold text-base text-slate-800">ฝั่งเจ้าของร้าน (Admin Control)</h3>
+                    </div>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        <span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        เชื่อมต่ออยู่
+                    </span>
+                </div>
+
+                <!-- Admin Workspace Form -->
+                <div class="p-6 space-y-6">
+                    <!-- State Indicator Banner (Simulates the image's top save indicator info panel) -->
+                    <div id="state-saved-banner" class="bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-600 flex items-center space-x-2 transition-all duration-300">
+                        <i class="fa-solid fa-circle-info text-blue-500 animate-bounce"></i>
+                        <span class="flex-grow">
+                            <strong class="text-slate-700 font-semibold">บันทึกสถานะเรียลไทม์:</strong> 
+                            <span id="banner-text-state">เปิดปกติ, 08:00 - 17:00</span>
+                        </span>
+                        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold uppercase">Auto-Saved</span>
+                    </div>
+
+                    <!-- FIELD 1: SHOP STATUS TOGGLE -->
+                    <div class="space-y-3">
+                        <label class="block text-sm font-bold text-slate-700">
+                            สถานะร้านวันนี้:
+                        </label>
+                        
+                        <!-- Toggle Wrapper (Custom Toggle designed like the image but highly interactive) -->
+                        <div class="flex items-center space-x-4 bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80">
+                            <!-- Toggle Button container with slide active state -->
+                            <div class="relative w-full flex p-1 bg-slate-200 rounded-xl select-none">
+                                <!-- Background Active Overlay -->
+                                <div id="toggle-active-bg" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out shadow-sm"></div>
+                                
+                                <!-- Option 1: Open -->
+                                <button type="button" onclick="setShopStatus('open')" id="status-btn-open" class="z-10 w-1/2 text-center py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow shadow-emerald-400"></span>
+                                    <span>เปิดปกติ</span>
+                                </button>
+                                
+                                <!-- Option 2: Closed -->
+                                <button type="button" onclick="setShopStatus('closed')" id="status-btn-closed" class="z-10 w-1/2 text-center py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg text-slate-500">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow shadow-rose-400"></span>
+                                    <span>ปิดชั่วคราว</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FIELD 2 & 3: OPEN / CLOSE TIME -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label for="input-open-time" class="block text-sm font-bold text-slate-700">
+                                <i class="fa-regular fa-clock text-amber-600 mr-1.5"></i>เวลาเปิด:
+                            </label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="time" id="input-open-time" oninput="updateLiveState()" value="08:00" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="input-close-time" class="block text-sm font-bold text-slate-700">
+                                <i class="fa-solid fa-clock text-amber-700 mr-1.5"></i>เวลาปิด:
+                            </label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="time" id="input-close-time" oninput="updateLiveState()" value="17:00" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FIELD 4: SPECIAL NOTE (WITH PRESETS) -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label for="input-special-note" class="block text-sm font-bold text-slate-700">
+                                <i class="fa-solid fa-pen-nib text-amber-600 mr-1.5"></i>โน้ตพิเศษ (ถ้ามี):
+                            </label>
+                            <span id="char-counter" class="text-xs text-slate-400">0 / 60 ตัวอักษร</span>
+                        </div>
+                        <textarea id="input-special-note" oninput="handleNoteInput()" maxlength="60" rows="3" placeholder="เช่น วันนี้ปิดเร็ว 1 ชม. นะครับ" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm placeholder:text-slate-400" resize="none"></textarea>
+                        
+                        <!-- Quick Presets -->
+                        <div class="space-y-1.5">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">คลิกเพื่อดึงข้อความด่วน:</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" onclick="applyPreset('วันนี้ปิดเร็ว 1 ชม. นะครับ')" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-xs text-slate-600 transition-colors">⚡ ปิดเร็ว 1 ชม.</button>
+                                <button type="button" onclick="applyPreset('วันนี้ปิดปรับปรุงระบบเครื่องกรองน้ำ')" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-xs text-slate-600 transition-colors">🛠️ ปิดซ่อมระบบ</button>
+                                <button type="button" onclick="applyPreset('ยินดีต้อนรับ! วันนี้มีเมล็ดกาแฟนำเข้าใหม่')" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-xs text-slate-600 transition-colors">✨ แนะนำเมล็ดใหม่</button>
+                                <button type="button" onclick="applyPreset('')" class="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300 text-[10px] text-slate-600 font-bold transition-colors">ล้างข้อความ</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EXTRA COFFEE SHOP CUSTOMIZER SECTION -->
+                    <div class="pt-4 border-t border-slate-200/80 space-y-3">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">เครื่องมือตกแต่งแบรนด์ (Shop Profile)</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="input-shop-name" class="block text-xs font-bold text-slate-500 mb-1">ชื่อร้านกาแฟ:</label>
+                                <input type="text" id="input-shop-name" oninput="updateLiveState()" value="☕ BREW & CO." class="w-full bg-slate-100/70 border border-slate-200/80 rounded-lg px-3 py-2 text-xs text-slate-700 font-bold focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all">
+                            </div>
+                            <div>
+                                <label for="input-shop-branch" class="block text-xs font-bold text-slate-500 mb-1">สาขา:</label>
+                                <input type="text" id="input-shop-branch" oninput="updateLiveState()" value="สาขาหลัก (สุขุมวิท 21)" class="w-full bg-slate-100/70 border border-slate-200/80 rounded-lg px-3 py-2 text-xs text-slate-700 font-semibold focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SAVE ACTION BUTTON -->
+                    <div class="pt-2">
+                        <button type="button" onclick="triggerManualSave()" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transition-all duration-150 flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>บันทึกการเปลี่ยนแปลง</span>
+                        </button>
+                    </div>
+
+                    <!-- LIVE SIMULATED ACTIVITY FEED -->
+                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-xs text-slate-500 space-y-2">
+                        <div class="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            <span>ความเคลื่อนไหวจำลองของลูกค้า (Activity Logs)</span>
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                        </div>
+                        <div id="simulated-logs-container" class="space-y-1.5 max-h-24 overflow-y-auto font-mono text-[10px]">
+                            <!-- Appended dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT COLUMN: CUSTOMER VIEW (7 cols on large screens, floats elegantly) -->
+            <section class="lg:col-span-6 flex flex-col space-y-6">
+                
+                <!-- CUSTOMER COMPONENT DEVICE MOCKUP -->
+                <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col transition-all duration-300">
+                    
+                    <!-- Header (matches image style but with branding color accents) -->
+                    <div id="customer-header" class="bg-emerald-100 text-slate-700 px-6 py-4 border-b border-emerald-200 transition-all duration-300 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-users text-emerald-700"></i>
+                            <h3 class="font-bold text-base text-slate-800">ฝั่งลูกค้า (Customer View)</h3>
+                        </div>
+                        <span class="text-[11px] font-bold text-emerald-800 tracking-wider flex items-center bg-white/65 px-2 py-0.5 rounded-full uppercase">
+                            <i class="fa-solid fa-eye text-emerald-600 mr-1 animate-pulse"></i>
+                            หน้าจอจริงที่ลูกค้าเห็น
+                        </span>
+                    </div>
+
+                    <!-- Main Customer Mobile Screen Preview Area -->
+                    <div id="customer-bg" class="p-6 bg-slate-50 transition-colors duration-500 flex flex-col items-center justify-center min-h-[420px] relative">
+                        
+                        <!-- Floating Shop Name and Branch details -->
+                        <div class="text-center mb-6 space-y-1 w-full">
+                            <div class="flex items-center justify-center space-x-2">
+                                <span class="text-xs bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded-full font-bold" id="customer-badge-emoji">☕</span>
+                                <h4 class="text-lg font-extrabold text-slate-800 tracking-tight" id="customer-shop-name">☕ BREW & CO.</h4>
+                            </div>
+                            <p class="text-xs text-slate-500 font-medium" id="customer-shop-branch">สาขาหลัก (สุขุมวิท 21)</p>
+                            <div class="w-12 h-1 bg-amber-500 mx-auto rounded-full mt-2 opacity-60"></div>
+                        </div>
+
+                        <!-- LARGE PROMINENT STATUS INDICATOR CARD -->
+                        <div class="w-full max-w-sm bg-white rounded-2xl p-6 border border-slate-200/70 shadow-md flex flex-col items-center justify-center space-y-5 transition-all duration-300">
+                            
+                            <!-- ACTIVE STATE CIRCLE DISPLAY -->
+                            <div class="relative flex items-center justify-center">
+                                
+                                <!-- Outer glowing ring (dynamic based on open/closed) -->
+                                <div id="indicator-glow" class="absolute inset-0 rounded-full transition-all duration-500 scale-110 opacity-70"></div>
+                                
+                                <!-- Primary Circle Ring (matches reference image style circles) -->
+                                <div id="status-circle" class="w-48 h-48 rounded-full border-[8px] flex flex-col items-center justify-center p-4 transition-all duration-500 relative z-10 bg-white">
+                                    
+                                    <!-- Inner Illustration: Steaming Coffee or Padlock depending on State -->
+                                    <div id="inner-graphic" class="relative w-14 h-14 mb-2 flex items-center justify-center">
+                                        <!-- Will render dynamically based on status (SVG / Icon with pulse) -->
+                                    </div>
+
+                                    <!-- Core Status Title text -->
+                                    <div class="flex items-center space-x-2">
+                                        <span id="small-indicator-dot" class="w-3 h-3 rounded-full animate-ping"></span>
+                                        <h5 id="main-status-title" class="text-lg font-black text-slate-800 tracking-tight">กำลังคำนวณ...</h5>
+                                    </div>
+                                    
+                                    <!-- Custom sub-status subtitle -->
+                                    <p id="main-status-subtitle" class="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-wide">...</p>
+                                </div>
+                            </div>
+
+                            <!-- LIVE SCHEDULE AND NOTICE CARD DETAILS -->
+                            <div class="w-full space-y-4 pt-3 border-t border-slate-100">
+                                <!-- Operating Hours row -->
+                                <div class="flex items-start space-x-3.5" id="hours-display-container">
+                                    <div class="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 flex-shrink-0">
+                                        <i class="fa-solid fa-clock"></i>
+                                    </div>
+                                    <div class="flex-grow">
+                                        <span class="text-[11px] font-bold text-slate-400 block uppercase tracking-wide">เวลาทำการวันนี้</span>
+                                        <span id="customer-hours" class="text-sm font-bold text-slate-700">08:00 - 17:00 น.</span>
+                                    </div>
+                                </div>
+
+                                <!-- Special Note Row -->
+                                <div class="flex items-start space-x-3.5">
+                                    <div class="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                                        <i class="fa-solid fa-circle-info"></i>
+                                    </div>
+                                    <div class="flex-grow">
+                                        <span class="text-[11px] font-bold text-slate-400 block uppercase tracking-wide">โน้ตพิเศษจากร้าน</span>
+                                        <div id="customer-note-bubble" class="text-sm font-semibold text-slate-700 mt-0.5 leading-snug">
+                                            -
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- BOTTOM SHARE TRIGGER BUTTON -->
+                        <div class="w-full max-w-sm mt-6">
+                            <button type="button" onclick="openShareModal()" class="w-full py-3 px-4 bg-white hover:bg-slate-100 active:scale-[0.98] border border-slate-200 text-slate-700 font-bold rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-share-nodes text-slate-500"></i>
+                                <span>แชร์ลิงก์ให้ลูกค้า (Share State Link)</span>
+                            </button>
+                        </div>
+
+                    </div>
+                    
+                </div>
+                
+                <!-- LIVE SIMULATOR EXPLANATION CORNER -->
+                <div class="bg-amber-50 rounded-2xl p-5 border border-amber-100 text-xs text-amber-900/80 space-y-2">
+                    <h5 class="font-bold text-amber-900 flex items-center">
+                        <i class="fa-solid fa-lightbulb text-amber-500 mr-2"></i>
+                        คำแนะนำเพิ่มเติมสำหรับนักพัฒนา/เจ้าของร้าน
+                    </h5>
+                    <p class="leading-relaxed">
+                        ระบบทำการบันทึกและซิงก์สถานะโดยอัตโนมัติ (Live-Sync) ทุกครั้งที่คุณแก้ไขข้อมูลบนฟอร์ม และยังรองรับระบบแชร์ลิงก์ที่ช่วยจำลองสถานะปัจจุบันออกไปเพื่อแชร์เข้าแอปแชทได้ทันที!
+                    </p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400">
+        <p>© 2026 Coffee Status Tracker Pro. สร้างด้วยความใส่ใจเพื่อร้านกาแฟยุคดิจิทัล</p>
+    </footer>
+
+    <!-- MODAL OVERLAY FOR SHARING -->
+    <div id="share-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl w-full max-w-md p-6 border border-slate-100 shadow-2xl relative transform scale-95 transition-transform duration-300">
+            <!-- Close Button -->
+            <button onclick="closeShareModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="text-center space-y-1 mb-6">
+                <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 mx-auto text-xl mb-2">
+                    <i class="fa-solid fa-qrcode"></i>
+                </div>
+                <h4 class="text-lg font-bold text-slate-800">แชร์สถานะร้านของคุณ</h4>
+                <p class="text-xs text-slate-500">คัดลอกลิงก์หรือสแกนคิวอาร์โค้ดด้านล่างเพื่อแชร์สถานะปัจจุบันให้ลูกค้าทราบ</p>
+            </div>
+
+            <!-- Fake QR Code Frame -->
+            <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200/60 flex flex-col items-center justify-center space-y-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 relative">
+                    <!-- Embedded SVG for a beautiful clean dynamic custom styled QR Code -->
+                    <svg class="w-36 h-36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="100" height="100" fill="#ffffff" />
+                        <!-- QR Code Anchor Blocks -->
+                        <rect x="5" y="5" width="25" height="25" fill="#1e293b" />
+                        <rect x="10" y="10" width="15" height="15" fill="#ffffff" />
+                        <rect x="12" y="12" width="11" height="11" fill="#d97706" />
+                        
+                        <rect x="70" y="5" width="25" height="25" fill="#1e293b" />
+                        <rect x="75" y="10" width="15" height="15" fill="#ffffff" />
+                        <rect x="77" y="12" width="11" height="11" fill="#d97706" />
+
+                        <rect x="5" y="70" width="25" height="25" fill="#1e293b" />
+                        <rect x="10" y="75" width="15" height="15" fill="#ffffff" />
+                        <rect x="12" y="77" width="11" height="11" fill="#d97706" />
+
+                        <!-- Random QR Noise Simulated Pattern blocks -->
+                        <rect x="40" y="10" width="10" height="5" fill="#1e293b" />
+                        <rect x="45" y="20" width="15" height="10" fill="#1e293b" />
+                        <rect x="5" y="40" width="10" height="10" fill="#1e293b" />
+                        <rect x="20" y="45" width="15" height="5" fill="#1e293b" />
+                        <rect x="40" y="40" width="20" height="20" fill="#1e293b" />
+                        <rect x="70" y="40" width="10" height="15" fill="#1e293b" />
+                        <rect x="85" y="50" width="10" height="20" fill="#1e293b" />
+                        <rect x="40" y="70" width="15" height="15" fill="#1e293b" />
+                        <rect x="60" y="80" width="20" height="15" fill="#1e293b" />
+                        <rect x="85" y="80" width="10" height="10" fill="#1e293b" />
+                        <!-- Center Logo Frame -->
+                        <rect x="42" y="42" width="16" height="16" rx="4" fill="#ffffff" />
+                        <text x="50" y="53" font-size="9" font-family="Arial" font-weight="bold" fill="#d97706" text-anchor="middle">☕</text>
+                    </svg>
+                </div>
+                <div class="text-center">
+                    <span class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded" id="qr-status-tag">เปิดปกติ</span>
+                    <span class="text-xs text-slate-500 ml-1.5" id="qr-time-tag">08:00 - 17:00</span>
+                </div>
+            </div>
+
+            <!-- Copy Link Input Field -->
+            <div class="mt-4 space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide">ลิงก์ที่เข้าหน้านี้โดยตรง</label>
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="share-link-input" readonly value="https://coffeeshop-tracker.web.app/brew-and-co/live" class="flex-grow bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-600 focus:outline-none">
+                    <button onclick="copyShareLink()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-white text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>คัดลอก</span>
+                    </button>
+                </div>
+                <div id="copy-confirmation" class="text-xs text-emerald-600 font-medium text-center hidden flex items-center justify-center space-x-1 mt-1">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>คัดลอกลิงก์ไปยังคลิปบอร์ดของคุณแล้ว!</span>
+                </div>
+            </div>
+
+            <!-- Dialog CTA Button -->
+            <div class="mt-6">
+                <button onclick="closeShareModal()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition-colors">
+                    เสร็จสิ้น
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION FLOATING TOAST -->
+    <div id="toast-message" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center space-x-3 border border-slate-800 max-w-sm">
+            <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center" id="toast-icon-container">
+                <i class="fa-solid fa-circle-check" id="toast-icon"></i>
+            </div>
+            <div>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">ระบบอัจฉริยะ</p>
+                <p class="text-sm font-semibold text-slate-100" id="toast-text">ทำรายการเรียบร้อยแล้ว!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // STATE STORAGE
+        let state = {
+            status: 'open',
+            openTime: '08:00',
+            closeTime: '17:00',
+            specialNote: '',
+            shopName: '☕ BREW & CO.',
+            shopBranch: 'สาขาหลัก (สุขุมวิท 21)',
+            theme: 'espresso',
+            soundEnabled: true
+        };
+
+        // Theme Definitions (Accent Color classes)
+        const themes = {
+            espresso: {
+                primary: 'amber-600',
+                accent: 'amber-500',
+                headerBg: 'bg-emerald-100',
+                headerBorder: 'border-emerald-200',
+                customerRing: 'border-amber-500/30'
+            },
+            matcha: {
+                primary: 'emerald-600',
+                accent: 'emerald-500',
+                headerBg: 'bg-emerald-100',
+                headerBorder: 'border-emerald-200',
+                customerRing: 'border-emerald-500/30'
+            },
+            berry: {
+                primary: 'rose-600',
+                accent: 'rose-500',
+                headerBg: 'bg-rose-100',
+                headerBorder: 'border-rose-200',
+                customerRing: 'border-rose-500/30'
+            }
+        };
+
+        // Web Audio Synthesizer for pleasant chimes
+        let audioCtx = null;
+        function playChime(type = 'success') {
+            if (!state.soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                if (type === 'success') {
+                    // Delightful double coffee bell chime
+                    let osc1 = audioCtx.createOscillator();
+                    let osc2 = audioCtx.createOscillator();
+                    let gainNode = audioCtx.createGain();
+
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                    osc1.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(1046.50, audioCtx.currentTime); // C6
+                    osc2.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.1); // E6
+
+                    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+
+                    osc1.connect(gainNode);
+                    osc2.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+
+                    osc1.start();
+                    osc2.start();
+                    osc1.stop(audioCtx.currentTime + 0.6);
+                    osc2.stop(audioCtx.currentTime + 0.6);
+                } else if (type === 'status_change') {
+                    // Alert clean chime
+                    let osc = audioCtx.createOscillator();
+                    let gainNode = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+                    osc.frequency.exponentialRampToValueAtTime(880.00, audioCtx.currentTime + 0.15); // A5
+                    
+                    gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+
+                    osc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                }
+            } catch (e) {
+                console.warn("Web Audio API not supported or interaction needed.", e);
+            }
+        }
+
+        // Toggle sound button status
+        function toggleSound() {
+            state.soundEnabled = !state.soundEnabled;
+            const btn = document.getElementById('sound-toggle-btn');
+            const icon = document.getElementById('sound-icon');
+            if (state.soundEnabled) {
+                btn.classList.remove('bg-rose-100', 'text-rose-600');
+                btn.classList.add('bg-slate-100', 'text-slate-600');
+                icon.className = 'fa-solid fa-volume-high';
+                showToast("เปิดเสียงเอฟเฟกต์เรียบร้อยแล้ว 🔔", "success");
+                playChime('success');
+            } else {
+                btn.classList.add('bg-rose-100', 'text-rose-600');
+                btn.classList.remove('bg-slate-100', 'text-slate-600');
+                icon.className = 'fa-solid fa-volume-xmark';
+                showToast("ปิดเสียงเอฟเฟกต์แล้ว 🔕", "success");
+            }
+        }
+
+        // INITIALIZATION ON WINDOW LOAD
+        window.onload = function () {
+            // Apply initial theme
+            setTheme('espresso');
+            // Sync form inputs to UI
+            document.getElementById('input-open-time').value = state.openTime;
+            document.getElementById('input-close-time').value = state.closeTime;
+            document.getElementById('input-special-note').value = state.specialNote;
+            document.getElementById('input-shop-name').value = state.shopName;
+            document.getElementById('input-shop-branch').value = state.shopBranch;
+
+            // Generate first batch of fake user activities
+            addSimulatedLog("ระบบเริ่มทำงาน: พร้อมเชื่อมต่อเรียบร้อย");
+            addSimulatedLog("จำลอง: มีผู้ใช้ 3 คนกำลังชมหน้าจอร้าน");
+
+            // Update entire workspace initially
+            updateLiveState(false); // don't trigger chime on initial load
+            
+            // Periodically generate simulated client actions for depth
+            setInterval(simulateVisitorAction, 9000);
+        };
+
+        // Reset inputs back to requirements defaults
+        function resetToDefaults() {
+            state.status = 'open';
+            state.openTime = '08:00';
+            state.closeTime = '17:00';
+            state.specialNote = '';
+            state.shopName = '☕ BREW & CO.';
+            state.shopBranch = 'สาขาหลัก (สุขุมวิท 21)';
+            
+            document.getElementById('input-open-time').value = state.openTime;
+            document.getElementById('input-close-time').value = state.closeTime;
+            document.getElementById('input-special-note').value = state.specialNote;
+            document.getElementById('input-shop-name').value = state.shopName;
+            document.getElementById('input-shop-branch').value = state.shopBranch;
+            
+            setShopStatus('open', false);
+            updateLiveState(true);
+            showToast("รีเซ็ตการตั้งค่าเรียบร้อยแล้ว ✨", "success");
+        }
+
+        // Apply a pre-written text block into note
+        function applyPreset(text) {
+            const textarea = document.getElementById('input-special-note');
+            textarea.value = text;
+            handleNoteInput();
+            playChime('success');
+        }
+
+        // Character counter handler
+        function handleNoteInput() {
+            const textarea = document.getElementById('input-special-note');
+            const counter = document.getElementById('char-counter');
+            const count = textarea.value.length;
+            counter.innerText = `${count} / 60 ตัวอักษร`;
+            
+            if (count >= 55) {
+                counter.className = "text-xs text-rose-500 font-bold";
+            } else {
+                counter.className = "text-xs text-slate-400";
+            }
+            updateLiveState();
+        }
+
+        // CHANGE THEME DYNAMICALLY
+        function setTheme(themeName) {
+            state.theme = themeName;
+            // Clear current theme active classes
+            ['espresso', 'matcha', 'berry'].forEach(t => {
+                const btn = document.getElementById(`theme-btn-${t}`);
+                if (btn) {
+                    btn.classList.remove('bg-white', 'shadow-sm', 'border', 'border-slate-200', 'font-bold');
+                    btn.classList.add('text-slate-500', 'hover:bg-white/50');
+                }
+            });
+
+            // Highlight selected
+            const activeBtn = document.getElementById(`theme-btn-${themeName}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-white', 'shadow-sm', 'border', 'border-slate-200', 'font-bold');
+                activeBtn.classList.remove('text-slate-500', 'hover:bg-white/50');
+            }
+
+            // Sync visual styles of customers header accent color
+            const custHeader = document.getElementById('customer-header');
+            if (themeName === 'espresso') {
+                custHeader.className = "bg-amber-100 text-amber-900 px-6 py-4 border-b border-amber-200 flex items-center justify-between transition-colors duration-300";
+            } else if (themeName === 'matcha') {
+                custHeader.className = "bg-emerald-100 text-emerald-900 px-6 py-4 border-b border-emerald-200 flex items-center justify-between transition-colors duration-300";
+            } else if (themeName === 'berry') {
+                custHeader.className = "bg-rose-100 text-rose-900 px-6 py-4 border-b border-rose-200 flex items-center justify-between transition-colors duration-300";
+            }
+
+            updateLiveState(false);
+        }
+
+        // SWITCH SHOP STATUS (Open / Closed)
+        function setShopStatus(status, silent = false) {
+            state.status = status;
+            
+            const openBtn = document.getElementById('status-btn-open');
+            const closedBtn = document.getElementById('status-btn-closed');
+            const activeBg = document.getElementById('toggle-active-bg');
+
+            if (status === 'open') {
+                // Style Active Open
+                activeBg.style.left = '4px';
+                activeBg.className = "absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out shadow-sm bg-emerald-500";
+                
+                openBtn.className = "z-10 w-1/2 text-center py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg text-white";
+                closedBtn.className = "z-10 w-1/2 text-center py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg text-slate-500 hover:text-slate-700";
+                
+                if (!silent) {
+                    playChime('status_change');
+                    showToast("เปลี่ยนสถานะร้านเป็น: เปิดปกติ 🟢", "success");
+                    addSimulatedLog("เจ้าของร้าน เปลี่ยนแปลงสถานะเป็น -> เปิดบริการปกติ");
+                }
+            } else {
+                // Style Active Closed
+                activeBg.style.left = 'calc(50% + 0px)';
+                activeBg.className = "absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out shadow-sm bg-rose-500";
+                
+                openBtn.className = "z-10 w-1/2 text-center py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg text-slate-500 hover:text-slate-700";
+                closedBtn.className = "z-10 w-1/2 text-center py-2.5 text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 rounded-lg text-white";
+                
+                if (!silent) {
+                    playChime('status_change');
+                    showToast("เปลี่ยนสถานะร้านเป็น: ปิดชั่วคราว 🔴", "success");
+                    addSimulatedLog("เจ้าของร้าน เปลี่ยนแปลงสถานะเป็น -> ปิดชั่วคราว");
+                }
+            }
+            updateLiveState(false);
+        }
+
+        // CORE LIVE-SYNC CONTROLLER
+        function updateLiveState(shouldChime = false) {
+            // Read inputs
+            state.openTime = document.getElementById('input-open-time').value || '08:00';
+            state.closeTime = document.getElementById('input-close-time').value || '17:00';
+            state.specialNote = document.getElementById('input-special-note').value.trim();
+            state.shopName = document.getElementById('input-shop-name').value.trim() || '☕ Coffee Shop';
+            state.shopBranch = document.getElementById('input-shop-branch').value.trim() || 'สาขาหลัก';
+
+            // 1. UPDATE STATE INDICATOR BANNER IN ADMIN PANEL
+            const statusThai = state.status === 'open' ? 'เปิดปกติ' : 'ปิดชั่วคราว';
+            const stateText = `${statusThai}, ${state.openTime} - ${state.closeTime}`;
+            document.getElementById('banner-text-state').innerText = stateText;
+
+            // 2. UPDATE CUSTOMER VIEW INTERACTIVE BRANDING
+            document.getElementById('customer-shop-name').innerText = state.shopName;
+            document.getElementById('customer-shop-branch').innerText = state.shopBranch;
+            
+            // Extract and use emoji dynamically from shop name input if exists
+            const emojiMatch = state.shopName.match(/[\p{Emoji_Presentation}\p{Emoji}\u2600-\u27BF]/u);
+            document.getElementById('customer-badge-emoji').innerText = emojiMatch ? emojiMatch[0] : '☕';
+
+            // 3. UPDATE DYNAMIC CUSTOMER MAIN STATE BADGE
+            const statusCircle = document.getElementById('status-circle');
+            const glowRing = document.getElementById('indicator-glow');
+            const mainTitle = document.getElementById('main-status-title');
+            const mainSubtitle = document.getElementById('main-status-subtitle');
+            const smallDot = document.getElementById('small-indicator-dot');
+            const graphicContainer = document.getElementById('inner-graphic');
+            const hoursContainer = document.getElementById('hours-display-container');
+            const customerHours = document.getElementById('customer-hours');
+            
+            // Select active colors based on currently active theme & state
+            const currentTheme = themes[state.theme];
+
+            if (state.status === 'open') {
+                // Style circle Open (Bright Green Glow design matching reference picture)
+                statusCircle.style.borderColor = "#22c55e"; // Emerald-500
+                statusCircle.style.boxShadow = "inset 0 0 15px rgba(34, 197, 94, 0.15)";
+                
+                glowRing.className = "absolute inset-0 rounded-full transition-all duration-500 scale-110 opacity-70 bg-emerald-500/10 glow-green pulse-effect";
+                
+                mainTitle.innerText = "ร้านเปิดให้บริการวันนี้";
+                mainTitle.className = "text-base font-extrabold text-emerald-700 tracking-tight text-center";
+                
+                mainSubtitle.innerText = "OPEN TODAY";
+                mainSubtitle.className = "text-[10px] text-emerald-600 font-bold mt-1 uppercase tracking-wider";
+                
+                smallDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-ping";
+
+                // Coffee cup steam graphic
+                graphicContainer.innerHTML = `
+                    <div class="absolute bottom-1 left-1/2 -translate-x-1/2 flex space-x-1">
+                        <span class="w-1 h-3 bg-amber-400 rounded-full steam-line"></span>
+                        <span class="w-1 h-4 bg-amber-500 rounded-full steam-line steam-delay-1"></span>
+                        <span class="w-1 h-3 bg-amber-400 rounded-full steam-line steam-delay-2"></span>
+                    </div>
+                    <i class="fa-solid fa-mug-hot text-amber-700 text-4xl absolute bottom-0 left-1/2 -translate-x-1/2"></i>
+                `;
+
+                // Show regular operating hours
+                hoursContainer.classList.remove('opacity-30', 'pointer-events-none');
+                customerHours.innerText = `${state.openTime} - ${state.closeTime} น.`;
+            } else {
+                // Style circle Closed (Severe Red Glow design matching reference picture)
+                statusCircle.style.borderColor = "#ef4444"; // Rose-500
+                statusCircle.style.boxShadow = "inset 0 0 15px rgba(239, 68, 68, 0.15)";
+                
+                glowRing.className = "absolute inset-0 rounded-full transition-all duration-500 scale-110 opacity-70 bg-rose-500/10 glow-red pulse-effect";
+                
+                mainTitle.innerText = "วันนี้ร้านปิดให้บริการ";
+                mainTitle.className = "text-base font-extrabold text-rose-700 tracking-tight text-center";
+                
+                mainSubtitle.innerText = "CLOSED TODAY";
+                mainSubtitle.className = "text-[10px] text-rose-600 font-bold mt-1 uppercase tracking-wider";
+                
+                smallDot.className = "w-2 h-2 rounded-full bg-rose-500 animate-ping";
+
+                // Closed graphic lock
+                graphicContainer.innerHTML = `
+                    <div class="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 shadow-sm animate-bounce">
+                        <i class="fa-solid fa-store-slash text-xl"></i>
+                    </div>
+                `;
+
+                // Gray out hours
+                hoursContainer.classList.add('opacity-30', 'pointer-events-none');
+                customerHours.innerText = "พบกันใหม่วันพรุ่งนี้ครับ";
+            }
+
+            // 4. UPDATE DYNAMIC SPECIAL NOTE CARD DISPLAY
+            const noteBubble = document.getElementById('customer-note-bubble');
+            if (state.specialNote) {
+                noteBubble.innerHTML = `
+                    <p class="text-amber-800 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 mt-1 text-xs font-semibold shadow-sm flex items-start space-x-1.5">
+                        <i class="fa-solid fa-quote-left text-[10px] text-amber-500 mt-1"></i>
+                        <span>${state.specialNote}</span>
+                    </p>
+                `;
+            } else {
+                noteBubble.innerHTML = `
+                    <p class="text-slate-400 text-xs italic mt-1 font-medium">ไม่มีโน้ตพิเศษในวันนี้</p>
+                `;
+            }
+
+            // Update QR Tags
+            document.getElementById('qr-status-tag').innerText = statusThai;
+            document.getElementById('qr-status-tag').className = `text-xs font-bold px-2 py-0.5 rounded ${state.status === 'open' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`;
+            document.getElementById('qr-time-tag').innerText = state.status === 'open' ? `${state.openTime} - ${state.closeTime}` : 'ปิดบริการ';
+
+            if (shouldChime) {
+                playChime('success');
+            }
+        }
+
+        // TRIGGER SAVE SIMULATOR (MANUAL SAVE ACTION)
+        function triggerManualSave() {
+            updateLiveState(true);
+            showToast("บันทึกการเปลี่ยนแปลง และอัปเดตสถานะของลูกค้ารวดเร็วทันใจ! 🚀", "success");
+            addSimulatedLog("ระบบบันทึกสถานะเรียบร้อยแล้ว -> พร้อมแชร์");
+        }
+
+        // MODAL MANAGEMENT
+        function openShareModal() {
+            // Build mock link with real state serialized in URL query string to show logic depth!
+            const encodedName = encodeURIComponent(state.shopName);
+            const encodedNote = encodeURIComponent(state.specialNote);
+            const mockUrl = `https://coffeetrack.app/store?status=${state.status}&hours=${state.openTime}-${state.closeTime}&name=${encodedName}&note=${encodedNote}`;
+            
+            document.getElementById('share-link-input').value = mockUrl;
+            
+            const modal = document.getElementById('share-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('.transform').classList.remove('scale-95');
+            }, 10);
+            playChime('success');
+            addSimulatedLog("ระบบเปิดแท็บ: รหัสคิวอาร์สำหรับการแชร์");
+        }
+
+        function closeShareModal() {
+            const modal = document.getElementById('share-modal');
+            modal.querySelector('.transform').classList.add('scale-95');
+            modal.classList.add('opacity-0');
+            document.getElementById('copy-confirmation').classList.add('hidden');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // COPY LINK VIA LEGACY DOCUMENT METHOD FOR IFRAME COMPATIBILITY
+        function copyShareLink() {
+            const linkInput = document.getElementById('share-link-input');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999); // For mobile devices
+
+            try {
+                // Leverage document.execCommand('copy') as requested by system prompt
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    const confirmation = document.getElementById('copy-confirmation');
+                    confirmation.classList.remove('hidden');
+                    playChime('success');
+                    showToast("คัดลอกลิงก์สำเร็จแล้ว! 🔗", "success");
+                    addSimulatedLog("จำลอง: ลิงก์สถานะถูกคัดลอกลงคลิปบอร์ด");
+                } else {
+                    throw new Error("Unable to copy");
+                }
+            } catch (err) {
+                console.error("Failed to copy link using document.execCommand", err);
+                showToast("ไม่สามารถคัดลอกลิงก์ได้ กรุณาคัดลอกด้วยตนเอง", "error");
+            }
+        }
+
+        // SIMULATE LIVE VISITOR FEED LOGS
+        function addSimulatedLog(message) {
+            const container = document.getElementById('simulated-logs-container');
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            
+            const logRow = document.createElement('div');
+            logRow.className = "flex items-start space-x-1.5 leading-tight text-slate-500 animate-fadeIn";
+            logRow.innerHTML = `
+                <span class="text-amber-600 font-bold shrink-0">[${timeStr}]</span>
+                <span class="flex-grow">${message}</span>
+            `;
+            container.appendChild(logRow);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Random simulated client actions
+        const mockPhrases = [
+            "ลูกค้าจาก สุขุมวิท เปิดหน้าเว็บเพื่อเช็คสถานะร้าน",
+            "ลูกค้าขาประจำ แชร์ลิงก์ร้านของคุณไปในกลุ่ม LINE",
+            "ลูกค้าท่านหนึ่ง กำลังจดโน้ตพิเศษของคุณลงในปฏิทิน",
+            "ลูกค้าประจำ ค้นหาเส้นทางผ่านแผนที่นำทางมาร้าน",
+            "มีผู้เยี่ยมชมหน้าเว็บเพิ่มขึ้น +1 รายในนาทีนี้"
+        ];
+
+        function simulateVisitorAction() {
+            const index = Math.floor(Math.random() * mockPhrases.length);
+            addSimulatedLog(`จำลอง: ${mockPhrases[index]}`);
+        }
+
+        // TOAST NOTIFICATIONS
+        let toastTimeout = null;
+        function showToast(message, type = "success") {
+            const toast = document.getElementById('toast-message');
+            const toastText = document.getElementById('toast-text');
+            const toastIcon = document.getElementById('toast-icon');
+            const iconBg = document.getElementById('toast-icon-container');
+
+            toastText.innerText = message;
+            
+            if (type === "success") {
+                iconBg.className = "w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center";
+                toastIcon.className = "fa-solid fa-circle-check";
+            } else {
+                iconBg.className = "w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center";
+                toastIcon.className = "fa-solid fa-triangle-exclamation";
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
